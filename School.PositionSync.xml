@@ -25,6 +25,39 @@
         <member name="F:School.PositionSync.TileKind.Stair">
             <summary>계단을 구성하는 한 칸.</summary>
         </member>
+        <member name="F:School.PositionSync.TileKind.HiddenOneUpBlock">
+            <summary>숨겨진 1UP 블록. 활성화 동작은 학생이 구현합니다.</summary>
+        </member>
+        <member name="F:School.PositionSync.TileKind.Flag">
+            <summary>깃대·깃발 표시 셀. 충돌하지 않습니다.</summary>
+        </member>
+        <member name="F:School.PositionSync.TileKind.Castle">
+            <summary>성 장식 셀. 충돌하지 않습니다.</summary>
+        </member>
+        <member name="F:School.PositionSync.TileKind.Coin">
+            <summary>지하 방 코인. 수집 처리는 학생이 구현합니다.</summary>
+        </member>
+        <member name="T:School.PositionSync.BlockContent">
+            <summary>원본 맵의 블록 내용물 데이터. 보상·변형 동작은 포함하지 않습니다.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.None">
+            <summary>내용물 없음.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.Coin">
+            <summary>코인 한 개.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.MushroomOrFlower">
+            <summary>버섯 또는 현재 성장 상태에 따른 파이어플라워.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.MultipleCoins">
+            <summary>여러 번 코인을 얻는 블록.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.Star">
+            <summary>스타.</summary>
+        </member>
+        <member name="F:School.PositionSync.BlockContent.OneUp">
+            <summary>1UP 버섯.</summary>
+        </member>
         <member name="T:School.PositionSync.GridPoint">
             <summary>읽기 전용 정수 그리드 좌표.</summary>
         </member>
@@ -49,6 +82,9 @@
         <member name="P:School.PositionSync.GridCell.Kind">
             <summary>시각 표현 종류.</summary>
         </member>
+        <member name="P:School.PositionSync.GridCell.Content">
+            <summary>블록 내용물. 학생이 별도로 동작을 구현할 때 사용하는 데이터입니다.</summary>
+        </member>
         <member name="P:School.PositionSync.GridCell.IsSolid">
             <summary>학생이 충돌 영역을 생성할 때 사용할 정적 데이터입니다.</summary>
         </member>
@@ -56,7 +92,7 @@
             <summary>공통 맵 데이터. 접속 없이 조회 가능하며 이동·충돌·진행 로직은 없습니다.</summary>
         </member>
         <member name="P:School.PositionSync.GridMap.Id">
-            <summary>맵 식별자. 정확한 마리오 1-1 복제 데이터가 아닌 수업용 연습 맵입니다.</summary>
+            <summary>원작 NES 슈퍼 마리오 브라더스 World 1-1의 맵 이미지에서 추출한 그리드 식별자.</summary>
         </member>
         <member name="P:School.PositionSync.GridMap.Version">
             <summary>배치 버전. 팀 전체가 같은 버전을 사용하세요.</summary>
@@ -80,7 +116,7 @@
             <summary>시작 지점의 빈 셀. 캐릭터 발 위치는 이 셀의 아래쪽 중앙입니다.</summary>
         </member>
         <member name="P:School.PositionSync.GridMap.Goal">
-            <summary>도착 마커의 빈 셀. 도착 판정은 학생이 구현합니다.</summary>
+            <summary>도착 판정 셀. 지상은 깃대, 지하는 출구 파이프이며 전환·판정은 학생이 구현합니다.</summary>
         </member>
         <member name="P:School.PositionSync.GridMap.FallBoundaryY">
             <summary>권장 추락 판정 Y. 실제 판정·부활은 학생이 구현합니다.</summary>
@@ -101,7 +137,10 @@
             <summary>DLL에 포함된 읽기 전용 맵 카탈로그.</summary>
         </member>
         <member name="P:School.PositionSync.MapCatalog.Default">
-            <summary>64×16 수업용 공통 연습 맵. 네트워크 연결이 필요하지 않습니다.</summary>
+            <summary>원작 World 1-1 지상 그리드. 네트워크 연결이 필요하지 않습니다.</summary>
+        </member>
+        <member name="P:School.PositionSync.MapCatalog.World11Underground">
+            <summary>World 1-1 지하 보너스 방 그리드. 입장은 지상 파이프 (57,5), 복귀는 (163,4) 발 좌표 기준입니다. 전환 동작은 포함하지 않습니다.</summary>
         </member>
         <member name="T:School.PositionSync.Info">
             <summary>플레이어 ID와 위치. 보낼 때 Id는 무시되며 서버가 연결별로 지정합니다.</summary>

@@ -1,4 +1,4 @@
-# 위치 동기화·맵 DLL v1.2.0
+# 위치 동기화·맵 DLL v1.3.0
 
 DLL과 XML을 Unity `Assets/Plugins`에 넣는다. 네임스페이스는 `School.PositionSync`다. 학생 기준 버전은 **Unity 6000.3.23f1**이다. DLL 대상은 .NET Standard 2.1 데스크톱용이며 WebGL은 지원하지 않는다. Player Settings의 API Compatibility Level은 .NET Standard 2.1을 사용한다.
 
@@ -46,34 +46,37 @@ Unity Update/LateUpdate에서 호출하면 된다. 접속·전송 루프·스레
 
 기존 SyncClient API는 호환성을 위해 남겨 두지만 이번 학생 과제는 Server API로 진행한다.
 
-## v1.1 추가: 맵 그리드 조회
-
-`MapCatalog.Default`는 접속 없이 읽을 수 있는 **64×16 공통 연습 맵**이다. 정확한 마리오 1-1 복제 좌표가 아니다. 맵 ID는 `classroom-platformer-01`, 배치 버전은 `1`이다. 모든 팀은 같은 맵 버전을 사용한다. 서버는 맵 버전을 검사하거나 맵을 전송하지 않는다.
+## v1.3: 원작 World 1-1 맵 그리드
 
 ```csharp
-GridMap map = MapCatalog.Default;
+GridMap map = MapCatalog.Default;             // 지상
+GridMap bonus = MapCatalog.World11Underground; // 지하 보너스 방
 foreach (GridCell cell in map.Cells)
 {
-    PlayerPosition center = map.GetCellCenter(cell.X, cell.Y);
-    // 학생 코드: cell.Kind에 맞는 프리팹 생성
-    // 중심 위치 = (center.X, center.Y, center.Z), 크기 = map.CellSize
-    // cell.IsSolid를 보고 Collider 설정
+    PlayerPosition p = map.GetCellCenter(cell.X, cell.Y);
+    // Kind에 맞는 오브젝트 생성, p 위치에 배치, IsSolid에 따라 충돌 설정
 }
-PlayerPosition startFeet = map.SpawnFeet;
 ```
 
-| API | 의미 |
+원작 NES 맵 이미지의 16×16픽셀 타일을 1×1 월드 단위로 변환했다. 지상은 이미지 전체 폭을 포함한 **224×15**, 지하 방은 **17×15**다. 원점은 왼쪽 아래이며 Y가 위로 증가한다. 맵 ID는 smb-1-1-overworld / smb-1-1-underground, 배치 버전은 2다.
+
+| 데이터 | 의미 |
 |---|---|
-| `Width`, `Height` | 열·행 수 |
-| `CellSize` | 한 칸 = 1 월드 단위 |
-| `OriginX`, `OriginY` | 맵 왼쪽 아래 = (0, 0) |
-| `Cells` | 빈 칸을 제외한 읽기 전용 셀 목록 |
-| `GetTile(x, y)` | Empty/Ground/Brick/Question/Pipe/Stair. 범위 밖은 예외 |
-| `GetCellCenter(x, y)` | 셀 중앙의 월드 XYZ, Z=0 |
-| `Spawn`, `Goal` | 시작·도착 마커의 그리드 좌표. 해당 칸 자체는 빈 칸 |
-| `SpawnFeet` | 캐릭터 발 기준 시작 월드 좌표 (2.5, 2, 0) |
-| `FallBoundaryY` | 권장 추락 기준 -4. 판정·부활은 직접 구현 |
+| Width / Height / CellSize | 맵 크기, 한 칸 = 1 |
+| Cells | 빈 칸을 제외한 읽기 전용 셀 목록. 지상 633개, 지하 118개 |
+| GridCell.Id / X / Y / Kind | 고유 셀 ID, 열·행, 종류 |
+| GridCell.IsSolid | 일반 충돌 영역 여부. 장식·코인·숨겨진 블록은 false |
+| GridCell.Content | 코인·버섯/꽃·다중 코인·스타·1UP 내용물 데이터 |
+| GetTile(x,y) | 셀 종류. 맵 밖은 예외 |
+| GetCellCenter(x,y) | 셀 중앙의 월드 XYZ. Z=0 |
+| Spawn / SpawnFeet | 시작 셀과 발 기준 월드 좌표. 지상 발 위치 (2.5,2,0) |
+| Goal | 지상 깃대 셀 (198,3), 지하는 출구 파이프 셀 (13,2) |
+| FallBoundaryY | 수업용 추락 판정 권장값 -4. 원작 물리 데이터가 아님 |
 
-X는 오른쪽, Y는 위로 증가한다. 셀 (0,0)은 [0,1]×[0,1]이고 중심은 (0.5,0.5)이다. 중심 피벗의 플레이어는 SpawnFeet의 Y에 캐릭터 반높이를 더해 배치한다. 도착 표시도 Goal 좌표를 월드 좌표로 바꿔 직접 만든다.
+Kind는 Empty, Ground, Brick, Question, Pipe, Stair, HiddenOneUpBlock, Flag, Castle, Coin이다. 파이프·계단·성은 셀별로 제공한다. 숨겨진 1UP 블록은 처음에 그리지 않고, 아래에서 치는 판정·출현은 별도로 구현한다. 지하 방 코인은 19개다. 성과 깃발은 장식이며 벽처럼 충돌시키지 않는다.
 
-Cell의 `Id`는 `Y * Width + X`이며 `IsSolid`는 데이터일 뿐이다. DLL이 Collider를 생성하거나 착지를 판정하지 않는다. 파이프와 계단도 한 칸씩 제공하므로 그대로 생성하거나 같은 종류의 인접 셀을 묶어서 표현한다. 외형을 묶더라도 충돌 영역은 공통 그리드와 같아야 한다. Question은 표시 종류만 제공하며 아이템 생성이나 블록 파괴는 포함하지 않는다.
+지상 진입 파이프 상단 셀은 (57,5), 복귀 파이프 상단의 발 높이는 y=4, x=163~165 범위다. 방 전환 기능은 DLL이 수행하지 않는다. 위치 동기화에는 맵 ID가 없으므로 함께 방을 이동하는 게임은 방 구분 규격을 추가로 합의해야 한다.
+
+원본의 **지형·블록·파이프·계단·깃대·성 및 지하 코인 배치 데이터**다. 구름·언덕 등 배경 그래픽, 적의 동작, 아이템 생성·수집, 원작 물리·체크포인트 동작은 DLL 기능이 아니다. 원본 이미지를 그대로 그리는 텍스처도 제공하지 않는다.
+
+출처: [NESMaps World 1-1 원작 맵](https://nesmaps.com/maps/SuperMarioBrothers/SuperMarioBrosMap1-1.png), 대조: [MarioWiki 원작 맵 자료](https://www.mariowiki.com/File:SMB_NES_World_1-1_Map.png). 좌표 추출 절차와 이미지 해시는 교사용 map-source 폴더에 기록했다. 네 팀은 같은 맵 버전을 사용해야 하며 서버는 맵 버전을 검사하지 않는다.
