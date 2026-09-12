@@ -1,4 +1,4 @@
-# 위치 동기화·맵 DLL v1.3.0
+# 위치 동기화·맵 DLL v1.4.0
 
 DLL과 XML을 Unity `Assets/Plugins`에 넣는다. 네임스페이스는 `School.PositionSync`다. 학생 기준 버전은 **Unity 6000.3.23f1**이다. DLL 대상은 .NET Standard 2.1 데스크톱용이며 WebGL은 지원하지 않는다. Player Settings의 API Compatibility Level은 .NET Standard 2.1을 사용한다.
 
@@ -7,9 +7,9 @@ DLL과 XML을 Unity `Assets/Plugins`에 넣는다. 네임스페이스는 `School
 ```csharp
 using School.PositionSync;
 
-// 시작 시 한 번. 같은 PC의 서버에 자동 접속
+// 시작 시 한 번. 온라인 교사 서버에 자동 접속
 Server server = new Server();
-// 다른 PC라면 new Server("교사 PC의 LAN IPv4 주소");
+// 로컬 테스트만 new Server("127.0.0.1");
 
 // 매 프레임 내 캐릭터 이동 후
 server.SetPos(new Info(myPosition.x, myPosition.y, 0));
@@ -18,7 +18,7 @@ server.SetPos(new Info(myPosition.x, myPosition.y, 0));
 Info[] players = server.GetPos();
 ```
 
-`Server`는 학생이 서버와 소통하는 객체다. 이 객체를 만든다고 중계 서버 프로그램이 실행되는 것은 아니다. 교사 PC에서 서버를 먼저 실행해야 한다. 기본 주소는 127.0.0.1, 포트는 7777이며 생성자에서 변경할 수 있다. 자동 서버 탐색은 없다.
+`Server`는 학생이 서버와 소통하는 객체다. 이 객체를 만든다고 중계 서버 프로그램이 실행되는 것은 아니다. 교사가 온라인 서버를 실행한다. 기본 주소는 sdh.asuscomm.com, 포트는 7777이며 생성자에서 변경할 수 있다. 자동 서버 탐색은 없다.
 
 | 호출 | 동작 |
 |---|---|

@@ -166,11 +166,14 @@
             이름은 Server지만 서버 프로그램을 실행하는 것이 아닌 클라이언트용 객체입니다.
             </summary>
         </member>
+        <member name="F:School.PositionSync.Server.DefaultHost">
+            <summary>교사 온라인 서버 주소.</summary>
+        </member>
+        <member name="M:School.PositionSync.Server.#ctor">
+            <summary>교사 온라인 서버에 자동 접속합니다. Unity 메인 스레드를 막지 않습니다.</summary>
+        </member>
         <member name="M:School.PositionSync.Server.#ctor(System.String,System.Int32)">
-            <summary>
-            자동 접속합니다. 기본은 같은 PC의 127.0.0.1:7777입니다.
-            다른 PC에서는 host에 교사 서버의 LAN 주소를 넣으세요. Unity 메인 스레드를 막지 않습니다.
-            </summary>
+            <summary>지정한 서버에 자동 접속합니다. 로컬 테스트는 host에 127.0.0.1을 넣으세요.</summary>
         </member>
         <member name="M:School.PositionSync.Server.SetPos(School.PositionSync.Info)">
             <summary>내 최신 위치를 저장합니다. 실제 전송은 자동입니다. 접속 중에도 호출할 수 있습니다.</summary>
