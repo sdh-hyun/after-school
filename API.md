@@ -1,4 +1,4 @@
-# 위치 동기화·맵 DLL v1.4.0
+# 위치 동기화·맵 DLL v1.6.0
 
 DLL과 XML을 Unity `Assets/Plugins`에 넣는다. 네임스페이스는 `School.PositionSync`다. 학생 기준 버전은 **Unity 6000.3.23f1**이다. DLL 대상은 .NET Standard 2.1 데스크톱용이며 WebGL은 지원하지 않는다. Player Settings의 API Compatibility Level은 .NET Standard 2.1을 사용한다.
 
@@ -23,7 +23,7 @@ Info[] players = server.GetPos();
 | 호출 | 동작 |
 |---|---|
 | `new Server()` 또는 `new Server(host, port)` | 자동 비동기 접속 시작. await 불필요 |
-| `server.SetPos(new Info(x, y, z))` | 내 최신 위치 저장. 50ms마다 자동 전송. z 생략 시 0 |
+| `server.SetPos(new Info(x, y, z))` | 내 최신 위치 저장. 약 16ms(초당 약 60회)마다 자동 전송. z 생략 시 0 |
 | `Info[] players = server.GetPos()` | 나를 제외한 상대 위치의 최신 배열 |
 
 Info의 읽기 전용 속성은 `Id`, `X`, `Y`, `Z`다. 전송할 때 ID를 지정하지 않으며 서버가 연결별로 부여한다. 재접속 시 ID가 바뀐다. 배열의 순서 대신 ID로 상대 캐릭터를 구분한다. 생성 직후 접속 중이거나 상대가 없으면 빈 배열이다. 빈 배열만으로 접속 완료를 판단하지 않는다.
@@ -42,9 +42,63 @@ Info의 읽기 전용 속성은 `Id`, `X`, `Y`, `Z`다. 전송할 때 ID를 지�
 
 Unity Update/LateUpdate에서 호출하면 된다. 접속·전송 루프·스레드 관리는 DLL이 담당한다. 배열과 좌표는 데이터이므로 GameObject 생성·제거·위치 적용은 학생이 작성한다. 각 팀에서 연결 소유자는 한 명으로 정한다.
 
-동기화는 ID와 위치뿐이며 회전·속도·점프 상태는 전송하지 않는다. 예측·보정·보간도 없다. X=오른쪽, Y=위, Z=0 기준으로 팀 간 좌표와 이동 규칙을 맞춘다.
+동기화는 ID와 위치뿐이며 회전·속도·점프 상태는 전송하지 않는다. 예측·보정·보간도 없다. X=오른쪽, Y=위, Z=0 기준으로 팀 간 좌표를 맞추고, 스피드·중력·점프력은 서버가 보낸 값을 쓴다.
 
 기존 SyncClient API는 호환성을 위해 남겨 두지만 이번 학생 과제는 Server API로 진행한다.
+
+## v1.6: 서버가 정하는 이동 규칙
+
+서버에 접속이 끝나는 순간 **스피드·중력·점프력**이 콜백으로 한 번 전달된다. 네 팀은 이 값을 그대로 쓰고 코드나 인스펙터에 숫자를 따로 적지 않는다. 값을 받아 캐릭터를 움직이는 계산은 여전히 학생이 한다.
+
+```csharp
+Server server;
+MoveRules rules;
+bool canMove;   // 규칙을 받기 전에는 움직이지 않는다
+
+void Awake()
+{
+    server = new Server(OnConnected);                    // 온라인 서버
+    // server = new Server("127.0.0.1", 7777, OnConnected); // 로컬 테스트
+}
+
+void OnConnected(MoveRules received)
+{
+    rules = received;
+    canMove = true;
+}
+```
+
+- 콜백은 접속 성공 시 **한 번** 호출된다. `Server`를 만든 Unity 메인 스레드에서 실행되므로 콜백 안에서 GameObject·Rigidbody를 바로 다뤄도 된다.
+- 접속에 실패하면 호출되지 않는다. 실패는 기존처럼 SetPos/GetPos의 예외로 확인한다.
+- 콜백이 오기 전에 Dispose하면(장면 전환 등) 호출되지 않는다.
+- 콜백이 필요 없으면 기존처럼 `new Server()`를 쓴다.
+
+| 값 | 단위 | 쓰는 법 |
+|---|---|---|
+| `rules.Speed` | 칸/초 | 좌우 속도 = 입력(-1~1) × Speed |
+| `rules.Gravity` | 칸/초², 양수 | 매 초 세로 속도에서 Gravity만큼 뺀다 |
+| `rules.JumpPower` | 칸/초 | 점프하는 순간 세로 속도를 JumpPower로 만든다 |
+| `rules.JumpHeight` | 칸 | 이론상 최고 점프 높이. 팀 간 비교용 |
+
+Unity 물리를 쓰는 경우 예시:
+
+```csharp
+// 2D (Rigidbody2D)
+rb.gravityScale = rules.Gravity / Mathf.Abs(Physics2D.gravity.y);
+rb.linearVelocityX = input * rules.Speed;
+if (jumpPressed && grounded) rb.linearVelocityY = rules.JumpPower;
+
+// 3D (Rigidbody). useGravity를 끄고 FixedUpdate에서 직접 중력을 더한다.
+rb.useGravity = false;
+rb.linearVelocity += Vector3.down * rules.Gravity * Time.fixedDeltaTime;
+```
+
+- 점프는 `AddForce`가 아니라 세로 속도를 직접 넣는다. 힘으로 넣으면 질량·ForceMode에 따라 높이가 달라진다.
+- Linear Damping(Drag)은 0으로 둔다. 달리기, 누르는 시간에 따라 달라지는 점프, 점프 중 중력 배율 변경은 공통 규칙이 아니므로 전체 팀 합의 전에는 쓰지 않는다.
+- 판정 크기(콜라이더)는 서버가 보내지 않는다. 팀 간 합의한 값을 쓴다.
+- 값은 서버가 켜져 있는 동안 바뀌지 않는다. 교사가 값을 바꿔 서버를 다시 켜면 새 Server로 재접속해 콜백으로 새 값을 받는다.
+- 서버 없이 로컬 테스트할 때만 `new MoveRules(speed, gravity, jumpPower)`로 임시 값을 만든다. 실제 플레이에서는 서버 값을 쓴다.
+- v1.6 DLL은 v1.6 서버에만 접속된다. 이전 DLL도 새 서버에 접속·동기화되지만 이동 규칙은 받지 못한다.
 
 ## v1.3: 원작 World 1-1 맵 그리드
 
